@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using ZavaStorefront.Models;
 using ZavaStorefront.Services;
+using ZavaStorefront.Features;
 using System.Text.Json;
 
 namespace ZavaStorefront.Controllers
@@ -10,19 +11,30 @@ namespace ZavaStorefront.Controllers
         private readonly ILogger<ChatController> _logger;
         private readonly IChatService _chatService;
         private readonly ISessionManager _sessionManager;
+        private readonly IFeatureFlagService _featureFlagService;
 
         public ChatController(
             ILogger<ChatController> logger, 
             IChatService chatService,
-            ISessionManager sessionManager)
+            ISessionManager sessionManager,
+            IFeatureFlagService featureFlagService)
         {
             _logger = logger;
             _chatService = chatService;
             _sessionManager = sessionManager;
+            _featureFlagService = featureFlagService;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
+            // Check if AI Chat feature is enabled
+            var isEnabled = await _featureFlagService.IsFeatureEnabledAsync(FeatureFlags.AiChat);
+            if (!isEnabled)
+            {
+                _logger.LogWarning("Attempt to access chat feature when disabled");
+                return NotFound();
+            }
+
             _logger.LogInformation("Loading chat page");
             
             var viewModel = new ChatViewModel
@@ -36,6 +48,13 @@ namespace ZavaStorefront.Controllers
         [HttpPost]
         public async Task<IActionResult> SendMessage(string message)
         {
+            // Check if AI Chat feature is enabled
+            var isEnabled = await _featureFlagService.IsFeatureEnabledAsync(FeatureFlags.AiChat);
+            if (!isEnabled)
+            {
+                return Json(new { success = false, error = "Chat feature is not available" });
+            }
+
             if (string.IsNullOrWhiteSpace(message))
             {
                 return Json(new { success = false, error = "Message cannot be empty" });
@@ -97,8 +116,15 @@ namespace ZavaStorefront.Controllers
         }
 
         [HttpPost]
-        public IActionResult ClearHistory()
+        public async Task<IActionResult> ClearHistory()
         {
+            // Check if AI Chat feature is enabled
+            var isEnabled = await _featureFlagService.IsFeatureEnabledAsync(FeatureFlags.AiChat);
+            if (!isEnabled)
+            {
+                return Json(new { success = false, error = "Chat feature is not available" });
+            }
+
             _logger.LogInformation("Clearing chat history");
             _sessionManager.Remove("ChatHistory");
             return Json(new { success = true });

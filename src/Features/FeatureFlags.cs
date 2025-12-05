@@ -29,5 +29,10 @@ namespace ZavaStorefront.Features
         /// Enables bulk discount functionality
         /// </summary>
         public const string BulkDiscounts = "BulkDiscounts";
+
+        /// <summary>
+        /// Enables AI chat functionality with Microsoft Foundry Phi4
+        /// </summary>
+        public const string AiChat = "AiChat";
     }
 }

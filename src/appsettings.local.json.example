@@ -1,0 +1,18 @@
+{
+  "ConnectionStrings": {
+    "Redis": "",
+    "AppConfig": ""
+  },
+  "AzureAI": {
+    "FoundryEndpoint": "https://your-foundry-endpoint.inference.ai.azure.com",
+    "ModelName": "Phi-4"
+  },
+  "FeatureManagement": {
+    "AiChat": true,
+    "BulkDiscounts": true,
+    "NewCheckout": false,
+    "RecommendationEngine": false,
+    "AdvancedAnalytics": false,
+    "EarlyAccessProducts": false
+  }
+}
