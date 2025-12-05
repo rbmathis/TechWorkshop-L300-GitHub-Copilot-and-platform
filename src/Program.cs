@@ -96,6 +96,7 @@ builder.Services.AddScoped<ZavaStorefront.Services.ISessionManager>(serviceProvi
 });
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<CartService>();
+builder.Services.AddScoped<IChatService, ChatService>();
 
 var app = builder.Build();
 
