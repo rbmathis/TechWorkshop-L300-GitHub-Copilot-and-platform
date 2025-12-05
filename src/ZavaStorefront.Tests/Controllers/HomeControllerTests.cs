@@ -2,6 +2,7 @@ using Xunit;
 using Moq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using ZavaStorefront.Controllers;
 using ZavaStorefront.Services;
 using ZavaStorefront.Models;
@@ -25,7 +26,8 @@ namespace ZavaStorefront.Tests.Controllers
                 _productService.Object,
                 new Mock<ITelemetryClient>().Object,
                 new Mock<ZavaStorefront.Services.ISessionManager>().Object,
-                new Mock<IFeatureFlagService>().Object);
+                new Mock<IFeatureFlagService>().Object,
+                new Mock<IOptions<BulkDiscountOptions>>().Object);
 
             _controller = new HomeController(_logger.Object, _productService.Object, _cartService.Object);
         }

@@ -2,6 +2,8 @@ using ZavaStorefront.Models;
 using ZavaStorefront.Features;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
+using ZavaStorefront.Models;
 
 namespace ZavaStorefront.Services
 {
@@ -13,14 +15,16 @@ namespace ZavaStorefront.Services
         private readonly ITelemetryClient _telemetry;
         private readonly ISessionManager _sessionManager;
         private readonly IFeatureFlagService _featureFlagService;
+        private readonly BulkDiscountOptions _discountOptions;
 
-        public CartService(IHttpContextAccessor httpContextAccessor, IProductService productService, ITelemetryClient telemetry, ISessionManager sessionManager, IFeatureFlagService featureFlagService)
+        public CartService(IHttpContextAccessor httpContextAccessor, IProductService productService, ITelemetryClient telemetry, ISessionManager sessionManager, IFeatureFlagService featureFlagService, IOptions<BulkDiscountOptions> discountOptions)
         {
             _httpContextAccessor = httpContextAccessor;
             _productService = productService;
             _telemetry = telemetry;
             _sessionManager = sessionManager;
             _featureFlagService = featureFlagService;
+            _discountOptions = discountOptions.Value;
         }
 
         public List<CartItem> GetCart()
@@ -197,15 +201,14 @@ namespace ZavaStorefront.Services
 
         private decimal ApplyBulkDiscount(decimal total)
         {
-            // Apply 10% discount for orders over $100
-            if (total > 100m)
+            // Use inclusive comparisons so thresholds like 100.00 still trigger the higher tier
+            if (total >= _discountOptions.ThresholdHigh && _discountOptions.RateHigh > 0)
             {
-                return total * 0.9m;
+                return total * (1 - _discountOptions.RateHigh);
             }
-            // Apply 5% discount for orders over $50
-            else if (total > 50m)
+            if (total >= _discountOptions.ThresholdLow && _discountOptions.RateLow > 0)
             {
-                return total * 0.95m;
+                return total * (1 - _discountOptions.RateLow);
             }
             return total;
         }

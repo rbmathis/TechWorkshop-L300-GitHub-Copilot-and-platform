@@ -5,8 +5,12 @@ using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Azure.AppConfiguration.AspNetCore;
 using Microsoft.FeatureManagement;
 using Azure.Identity;
+using ZavaStorefront.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Load local overrides for development (e.g., AppConfig connection, feature flags)
+builder.Configuration.AddJsonFile("appsettings.local.json", optional: true, reloadOnChange: true);
 
 // Connect to Azure App Configuration (optional, will use local settings if not available)
 var appConfigConnection = builder.Configuration.GetConnectionString("AppConfig");
@@ -39,6 +43,9 @@ if (!string.IsNullOrEmpty(appConfigConnection))
 builder.Services.AddControllersWithViews();
 builder.Services.AddApplicationInsightsTelemetry();
 builder.Services.AddSingleton<ITelemetryInitializer, UserSessionTelemetryInitializer>();
+
+// Bind bulk discount options (supports App Configuration keys like BulkDiscounts:ThresholdHigh)
+builder.Services.Configure<BulkDiscountOptions>(builder.Configuration.GetSection("BulkDiscounts"));
 
 // Add Feature Management
 builder.Services.AddFeatureManagement();

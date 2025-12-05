@@ -1,4 +1,4 @@
-@model List<ZavaStorefront.Models.CartItem>
+@model ZavaStorefront.Models.CartViewModel
 @{
     ViewData["Title"] = "Shopping Cart";
 }
@@ -6,7 +6,7 @@
 <div class="container mt-4">
     <h1 class="mb-4">Shopping Cart</h1>
 
-    @if (!Model.Any())
+    @if (!Model.Items.Any())
     {
         <div class="alert alert-info">
             <h4>Your cart is empty</h4>
@@ -29,7 +29,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var item in Model)
+                        @foreach (var item in Model.Items)
                         {
                             <tr>
                                 <td>
@@ -74,12 +74,42 @@
                         <hr>
                         <div class="d-flex justify-content-between mb-2">
                             <span>Items:</span>
-                            <span>@Model.Sum(i => i.Quantity)</span>
+                            <span>@Model.ItemCount</span>
                         </div>
-                        <div class="d-flex justify-content-between mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
                             <strong>Total:</strong>
-                            <strong>$@ViewBag.CartTotal.ToString("F2")</strong>
+                            <span class="fw-semibold">$@Model.Total.ToString("F2")</span>
                         </div>
+
+                        @if (Model.IsBulkDiscountEnabled)
+                        {
+                            <div class="alert alert-success py-2 mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <span><strong>Bulk discounts</strong> are enabled</span>
+                                    @if (Model.DiscountApplied)
+                                    {
+                                        <span class="badge bg-success">Applied</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">No discount yet</span>
+                                    }
+                                </div>
+                                <small class="text-muted">Orders over $@Model.FirstTierThreshold.ToString("F2") get
+                                    @Model.FirstTierDiscount%, over $@Model.SecondTierThreshold.ToString("F2") get
+                                    @Model.SecondTierDiscount%.</small>
+                            </div>
+
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Discounted total:</span>
+                                <span>$@Model.DiscountedTotal.ToString("F2")</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3">
+                                <span>Savings:</span>
+                                <span class="text-success">$@Model.Savings.ToString("F2")</span>
+                            </div>
+                        }
+
                         <form asp-controller="Cart" asp-action="Checkout" method="post">
                             <button type="submit" class="btn btn-success w-100 mb-2">Checkout</button>
                         </form>
