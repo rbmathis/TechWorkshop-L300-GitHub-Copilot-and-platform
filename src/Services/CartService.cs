@@ -1,4 +1,5 @@
 using ZavaStorefront.Models;
+using ZavaStorefront.Features;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 
@@ -11,13 +12,15 @@ namespace ZavaStorefront.Services
         private readonly IProductService _productService;
         private readonly ITelemetryClient _telemetry;
         private readonly ISessionManager _sessionManager;
+        private readonly IFeatureFlagService _featureFlagService;
 
-        public CartService(IHttpContextAccessor httpContextAccessor, IProductService productService, ITelemetryClient telemetry, ISessionManager sessionManager)
+        public CartService(IHttpContextAccessor httpContextAccessor, IProductService productService, ITelemetryClient telemetry, ISessionManager sessionManager, IFeatureFlagService featureFlagService)
         {
             _httpContextAccessor = httpContextAccessor;
             _productService = productService;
             _telemetry = telemetry;
             _sessionManager = sessionManager;
+            _featureFlagService = featureFlagService;
         }
 
         public List<CartItem> GetCart()
@@ -167,6 +170,44 @@ namespace ZavaStorefront.Services
         {
             var cart = GetCart();
             return cart.Sum(item => (item.Product?.Price ?? 0) * item.Quantity);
+        }
+
+        /// <summary>
+        /// Get cart total with potential bulk discount if feature is enabled
+        /// </summary>
+        public async Task<decimal> GetCartTotalWithDiscountAsync()
+        {
+            var baseTotal = GetCartTotal();
+
+            // Apply bulk discount if feature is enabled and conditions are met
+            return await _featureFlagService.ExecuteIfEnabledAsync(
+                FeatureFlags.BulkDiscounts,
+                async () =>
+                {
+                    var discountedTotal = ApplyBulkDiscount(baseTotal);
+                    _telemetry.TrackEvent("BulkDiscount_Applied", new Dictionary<string, string>
+                    {
+                        { "originalTotal", baseTotal.ToString("F2") },
+                        { "discountedTotal", discountedTotal.ToString("F2") }
+                    });
+                    return await Task.FromResult(discountedTotal);
+                },
+                baseTotal);
+        }
+
+        private decimal ApplyBulkDiscount(decimal total)
+        {
+            // Apply 10% discount for orders over $100
+            if (total > 100m)
+            {
+                return total * 0.9m;
+            }
+            // Apply 5% discount for orders over $50
+            else if (total > 50m)
+            {
+                return total * 0.95m;
+            }
+            return total;
         }
 
         private void SaveCart(List<CartItem> cart)
