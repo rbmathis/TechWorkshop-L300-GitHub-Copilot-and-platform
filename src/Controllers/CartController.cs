@@ -44,6 +44,7 @@ namespace ZavaStorefront.Controllers
             var itemCount = _cartService.GetCartItemCount();
             var total = _cartService.GetCartTotal();
             _logger.LogInformation("Processing checkout for {ItemCount} items, total: {Total:C}", itemCount, total);
+            _logger.LogInformation("Telemetry: Checkout_Start itemCount={ItemCount} total={Total}", itemCount, total);
             _cartService.ClearCart();
             return RedirectToAction("CheckoutSuccess");
         }

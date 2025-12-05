@@ -8,10 +8,10 @@ namespace ZavaStorefront.Controllers;
 public class HomeController : Controller
 {
     private readonly ILogger<HomeController> _logger;
-    private readonly ProductService _productService;
+    private readonly IProductService _productService;
     private readonly CartService _cartService;
 
-    public HomeController(ILogger<HomeController> logger, ProductService productService, CartService cartService)
+    public HomeController(ILogger<HomeController> logger, IProductService productService, CartService cartService)
     {
         _logger = logger;
         _productService = productService;

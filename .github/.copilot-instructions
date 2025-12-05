@@ -1,0 +1,34 @@
+# Copilot Instructions
+
+## Build Verification After Code Changes
+
+After every code change, execute the following build command to ensure nothing has broken:
+
+```bash
+cd /workspaces/TechWorkshop-L300-GitHub-Copilot-and-platform/src && dotnet build
+```
+
+### Guidelines
+
+1. **Mandatory Build Check**: Run `dotnet build` after completing any code modifications
+2. **Verify Success**: Ensure the build completes successfully (exit code 0)
+3. **Report Issues**: If the build fails, report the error details and do not proceed with further changes until the issue is resolved
+4. **Apply Fixes**: If build failures occur, investigate and fix the issues before completing the task
+
+### Applicable File Types
+
+- C# files (\*.cs)
+- CSHTML files (\*.cshtml)
+- Configuration files (appsettings.json)
+- Project files (\*.csproj)
+- Any other files that could affect the build
+
+### Build Failure Handling
+
+When the build fails:
+
+1. Stop making additional changes
+2. Display the error message to the user
+3. Investigate the root cause
+4. Fix the issues
+5. Re-run the build to confirm resolution

@@ -4,15 +4,17 @@ using System.Text.Json;
 
 namespace ZavaStorefront.Services
 {
-    public class ProductService
+    public class ProductService : IProductService
     {
         private const string ProductsCacheKey = "AllProducts";
         private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(10);
         private readonly IDistributedCache _cache;
+        private readonly ITelemetryClient _telemetry;
 
-        public ProductService(IDistributedCache cache)
+        public ProductService(IDistributedCache cache, ITelemetryClient telemetry)
         {
             _cache = cache;
+            _telemetry = telemetry;
         }
 
         private static readonly List<Product> _products = new List<Product>
@@ -96,27 +98,42 @@ namespace ZavaStorefront.Services
                 Description = "Adjustable height desk with dual motors and memory presets.",
                 Price = 499.00m,
                 ImageUrl = "https://picsum.photos/id/111/200/200"
-            }        
+            }
         };
 
         public async Task<List<Product>> GetAllProductsAsync()
         {
             // Try to get from distributed cache first
             var cachedProducts = await _cache.GetStringAsync(ProductsCacheKey);
-            
+
             if (!string.IsNullOrEmpty(cachedProducts))
             {
+                _telemetry.TrackEvent("ProductsCacheHit", new Dictionary<string, string>
+                {
+                    { "cacheKey", ProductsCacheKey }
+                });
                 return JsonSerializer.Deserialize<List<Product>>(cachedProducts) ?? _products;
             }
 
             // Cache miss - store products in cache
+            _telemetry.TrackEvent("ProductsCacheMiss", new Dictionary<string, string>
+            {
+                { "cacheKey", ProductsCacheKey }
+            });
+
             var options = new DistributedCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = CacheExpiration
             };
-            
+
             await _cache.SetStringAsync(ProductsCacheKey, JsonSerializer.Serialize(_products), options);
-            
+
+            _telemetry.TrackEvent("ProductsCacheRefresh", new Dictionary<string, string>
+            {
+                { "cacheKey", ProductsCacheKey },
+                { "absoluteExpirationMinutes", CacheExpiration.TotalMinutes.ToString() }
+            });
+
             return _products;
         }
 

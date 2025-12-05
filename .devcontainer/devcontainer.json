@@ -7,7 +7,8 @@
     "vscode": {
       "extensions": [
         "ms-dotnettools.csdevkit",
-        "ms-azuretools.vscode-bicep"
+        "ms-azuretools.vscode-bicep",
+        "RobbOwen.synthwave-vscode"
       ]
     }
   }
