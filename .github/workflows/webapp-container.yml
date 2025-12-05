@@ -7,6 +7,8 @@ on:
       - "docs/**"
       - ".github/workflows/**"
       - "**/*.md"
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 env:
@@ -15,14 +17,54 @@ env:
   AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
 
 jobs:
-  build-and-deploy:
+  test:
     runs-on: ubuntu-latest
+    name: Test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.x"
+          cache: true
+          cache-dependency-path: "**/packages.lock.json"
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: "**/test-results.trx"
+
+  build-and-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     permissions:
       id-token: write
       contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set image tags
+        id: image-tags
+        run: |
+          echo "short-sha=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+          echo "tag-latest=${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
+          echo "tag-commit=${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "tag-short=${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.image-tags.outputs.short-sha }}" >> $GITHUB_OUTPUT
 
       - name: Azure login (OIDC)
         uses: azure/login@v1
@@ -32,14 +74,62 @@ jobs:
       - name: ACR login
         run: az acr login --name ${{ vars.ACR_NAME }}
 
-      - name: Build container image
-        run: docker build -t $REGISTRY_LOGIN_SERVER/$IMAGE_NAME:${{ github.sha }} ./src
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Push image
-        run: docker push $REGISTRY_LOGIN_SERVER/$IMAGE_NAME:${{ github.sha }}
+      - name: Build and push container image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./src
+          push: true
+          tags: |
+            ${{ steps.image-tags.outputs.tag-latest }}
+            ${{ steps.image-tags.outputs.tag-commit }}
+          cache-from: type=registry,ref=${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       - name: Deploy to Web App (container)
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          images: ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          images: ${{ steps.image-tags.outputs.tag-commit }}
+
+      - name: Health check
+        run: |
+          WEBAPP_URL=$(az webapp show -g $(az webapp list --query "[?name=='${{ env.AZURE_WEBAPP_NAME }}'].resourceGroup" -o tsv) -n ${{ env.AZURE_WEBAPP_NAME }} --query defaultHostName -o tsv)
+          echo "Checking health of https://$WEBAPP_URL..."
+          for i in {1..30}; do
+            if curl -sf "https://$WEBAPP_URL/health" > /dev/null 2>&1 || curl -sf "https://$WEBAPP_URL/" > /dev/null 2>&1; then
+              echo "✓ Application is healthy"
+              exit 0
+            fi
+            echo "Attempt $i/30: Waiting for app to be ready..."
+            sleep 10
+          done
+          echo "✗ Health check failed - application did not respond"
+          exit 1
+
+      - name: Create GitHub deployment
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha,
+              environment: 'production',
+              required_contexts: [],
+              auto_merge: false
+            })
+
+      - name: Workflow summary
+        if: always()
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Tags:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Latest: ${{ steps.image-tags.outputs.tag-latest }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: ${{ steps.image-tags.outputs.tag-commit }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Web App:** ${{ env.AZURE_WEBAPP_NAME }}" >> $GITHUB_STEP_SUMMARY
