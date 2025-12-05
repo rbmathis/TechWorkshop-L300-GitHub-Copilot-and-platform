@@ -1,9 +1,13 @@
 using ZavaStorefront.Services;
+using ZavaStorefront;
+using Microsoft.ApplicationInsights.Extensibility;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddApplicationInsightsTelemetry();
+builder.Services.AddSingleton<ITelemetryInitializer, UserSessionTelemetryInitializer>();
 
 // Add distributed cache - use Redis if configured, otherwise use in-memory cache
 var useRedisCache = builder.Configuration.GetValue<bool>("UseRedisCache");
@@ -32,6 +36,15 @@ builder.Services.AddSession(options =>
 
 // Register application services
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ITelemetryClient, ApplicationInsightsTelemetryClient>();
+builder.Services.AddScoped<ISessionManager>(serviceProvider =>
+{
+    var httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
+    var session = httpContextAccessor.HttpContext?.Session
+        ?? throw new InvalidOperationException("HttpContext session is not available");
+    return new SessionManager(session);
+});
+builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddSingleton<ProductService>();
 builder.Services.AddScoped<CartService>();
 

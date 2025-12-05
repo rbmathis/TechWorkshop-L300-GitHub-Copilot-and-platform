@@ -3,14 +3,14 @@
 
 targetScope = 'subscription'
 
+@minLength(1)
+@description('The Azure region for all resources')
+param location string = 'westus3'
+
 @description('The environment name (e.g., dev, test, prod)')
 @minLength(3)
 @maxLength(10)
 param environmentName string = 'dev'
-
-@description('The Azure region for all resources')
-@minLength(1)
-param location string = 'westus3'
 
 @description('The application name prefix')
 @minLength(3)
