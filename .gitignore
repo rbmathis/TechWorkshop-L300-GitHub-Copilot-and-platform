@@ -91,8 +91,7 @@ htmlcov/
 .ipynb_checkpoints
 
 # Docker
-**/Dockerfile*
-**/.dockerignore
+# Note: We keep Dockerfile and .dockerignore as they're part of the project
 docker-compose.override.yml
 
 # Logs
@@ -148,3 +147,6 @@ desktop.ini
 # Keep track of local configs that may be useful to commit by exception
 !/.gitattributes
 !/.gitignore
+
+# Azure Developer CLI
+.azure/
