@@ -79,9 +79,30 @@
     </div>
 </div>
 
+<!-- Toast Container for error messages -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="errorToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-danger text-white">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <strong class="me-auto">Error</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="errorToastMessage">
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         $(document).ready(function() {
+            // Show error toast notification
+            function showErrorToast(message) {
+                $('#errorToastMessage').text(message);
+                var toastEl = document.getElementById('errorToast');
+                var toast = new bootstrap.Toast(toastEl);
+                toast.show();
+            }
+
             // Auto-scroll to bottom of chat history
             function scrollToBottom() {
                 var chatHistory = $('#chatHistory');
@@ -126,11 +147,11 @@
                             // Scroll to bottom
                             scrollToBottom();
                         } else {
-                            alert('Error: ' + (response.error || 'Unknown error occurred'));
+                            showErrorToast('Error: ' + (response.error || 'Unknown error occurred'));
                         }
                     },
                     error: function(xhr, status, error) {
-                        alert('Error sending message: ' + error);
+                        showErrorToast('Error sending message: ' + error);
                     },
                     complete: function() {
                         // Re-enable input and hide loading
@@ -155,7 +176,7 @@
                             }
                         },
                         error: function(xhr, status, error) {
-                            alert('Error clearing history: ' + error);
+                            showErrorToast('Error clearing history: ' + error);
                         }
                     });
                 }

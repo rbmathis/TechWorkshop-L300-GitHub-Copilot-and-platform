@@ -77,6 +77,10 @@ namespace ZavaStorefront.Services
                 });
 
                 var response = await client.CompleteAsync(requestOptions);
+                if (response?.Value?.Content == null)
+                {
+                    throw new InvalidOperationException("Received null response from AI model");
+                }
                 var assistantMessage = response.Value.Content;
 
                 _telemetry.TrackEvent("ChatResponseReceived", new Dictionary<string, string>
