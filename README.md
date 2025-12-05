@@ -1,62 +1,118 @@
-# 🛒 Zava Storefront — L300 Tech Workshop
+# Zava Storefront — Documentation
 
-> **Cloud-Native E-Commerce Meets AI-Powered Developer Productivity**
+## 1. Project Overview
+- A lightweight ASP.NET Core MVC storefront that lists products, lets shoppers manage a cart, and performs a simple checkout flow. Session-based cart state with optional Redis backing; no database is required.
+- Tech stack: ASP.NET Core MVC on .NET 6, Bootstrap 5, Application Insights telemetry, optional Azure Cache for Redis, Azure App Configuration + Feature Management, Docker.
+- Architecture: classic MVC with dependency injection; services abstract telemetry, products, cart, sessions, and feature flags.
 
-Welcome to the **Zava Storefront** workshop — an immersive, hands-on deep dive where you'll transform a humble .NET storefront into a cloud-native powerhouse running on Azure, supercharged by GitHub Copilot, and fortified with enterprise-grade security and observability.
+## 2. Prerequisites & Setup
+- SDKs/Tools: .NET 6 SDK, Docker (optional for container run), Azure CLI + Azure Developer CLI for cloud deployment.
+- Local run:
+  ```bash
+  git clone https://github.com/rbmathis/TechWorkshop-L300-GitHub-Copilot-and-platform.git
+  cd TechWorkshop-L300-GitHub-Copilot-and-platform/src
+  dotnet restore
+  dotnet run
+  ```
+- appsettings secrets/example (`src/appsettings.json`):
+  ```json
+  {
+    "ApplicationInsights": {
+      "ConnectionString": "InstrumentationKey=..."
+    },
+    "ConnectionStrings": {
+      "Redis": "<redis-connection-string-if-used>"
+    },
+    "UseRedisCache": true,
+    "UseRedisSessionStore": true,
+    "Session": {
+      "IdleTimeoutMinutes": 30,
+      "CookieName": ".ZavaStorefront.Session"
+    }
+  }
+  ```
+  Use user-secrets or environment variables to keep real keys out of source control. Azure App Configuration is optional; when configured, feature flags and Key Vault integration are used.
 
-![Azure](https://img.shields.io/badge/Azure-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white)
-![.NET](https://img.shields.io/badge/.NET_6-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
-![GitHub Copilot](https://img.shields.io/badge/GitHub_Copilot-000?style=for-the-badge&logo=github&logoColor=white)
-![Bicep](https://img.shields.io/badge/Bicep-IaC-orange?style=for-the-badge)
-
----
-
-## 🔥 What You'll Build
-
-| Layer | Tech | Outcome |
-|-------|------|---------|
-| **App** | ASP.NET Core MVC, Docker | Containerised storefront with responsive UI |
-| **Infra** | Bicep, Azure Developer CLI | One-command provisioning of App Service, ACR, AI Foundry & more |
-| **CI/CD** | GitHub Actions | Automated build → push → deploy pipeline |
-| **Security** | GitHub Advanced Security, Managed Identity | Secret scanning, dependency review, zero-credential deployments |
-| **AI** | Azure AI Foundry, GitHub Copilot | Model governance, inline code suggestions, chat-driven development |
-| **Observability** | Application Insights, Log Analytics | End-to-end tracing, adaptive sampling, smart alerting |
-
----
-
-## 🚀 Quick Start
-
-```bash
-# Clone & open in dev container (batteries included)
-gh repo clone rbmathis/TechWorkshop-L300-GitHub-Copilot-and-platform
-code TechWorkshop-L300-GitHub-Copilot-and-platform
-
-# Authenticate to Azure
-az login && azd auth login
-
-# Deploy everything — infrastructure + app — in one shot
-azd up
+## 3. Folder Structure & Conventions
+```
+.
+├── src/                    # Application code
+│   ├── Controllers/        # MVC controllers
+│   ├── Features/           # Feature flag constants + service
+│   ├── Models/             # View models/domain models (Product, CartItem, ErrorViewModel)
+│   ├── Services/           # Cart, products, session, telemetry abstractions
+│   ├── Views/              # Razor views
+│   ├── wwwroot/            # Static assets
+│   ├── Program.cs          # DI setup, middleware pipeline
+│   ├── Dockerfile          # Container image build
+│   └── ZavaStorefront.Tests/ # xUnit test suite
+└── infra/                  # Bicep IaC + azd config
 ```
 
-Within minutes you'll have a fully operational Azure environment with:
-- 🏗️ Resource Group, Log Analytics, Application Insights
-- 📦 Azure Container Registry (RBAC-only, no admin keys)
-- 🌐 Linux App Service running your containerised storefront
-- 🤖 Azure AI Foundry workspace ready for model experimentation
+## 4. Key Architectural Decisions
+- Dependency Injection configured in `Program.cs` for controllers, services, telemetry, feature flags, distributed cache, and sessions.
+- Telemetry: `ApplicationInsightsTelemetryClient` wraps `TelemetryClient`; `UserSessionTelemetryInitializer` adds session context.
+- Feature flags: `FeatureFlagService` over `Microsoft.FeatureManagement`, optionally backed by Azure App Configuration.
+- Caching/session: switches between Redis (if connection provided and flags enabled) and in-memory cache; sessions stored in distributed cache when Redis is on.
+- Data: products served from an in-memory list cached via `IDistributedCache`; no database/EF Core is used.
 
----
+## 5. Areas / Modules
+- None defined; single MVC area.
 
-## 📚 Workshop Modules
+## 6. Controllers & Actions Summary
+| Area | Controller | HTTP Verb | Route | Action Method | Purpose | Auth Required |
+| --- | --- | --- | --- | --- | --- | --- |
+| — | HomeController | GET | `/` | Index | Show product catalog | No |
+| — | HomeController | POST | `/Home/AddToCart` | AddToCart | Add product to cart | No |
+| — | HomeController | GET | `/Home/Privacy` | Privacy | Static privacy page | No |
+| — | HomeController | GET | `/Home/Error` | Error | Error page | No |
+| — | CartController | GET | `/Cart` | Index | View cart | No |
+| — | CartController | POST | `/Cart/UpdateQuantity` | UpdateQuantity | Update item quantity | No |
+| — | CartController | POST | `/Cart/RemoveFromCart` | RemoveFromCart | Remove item | No |
+| — | CartController | POST | `/Cart/Checkout` | Checkout | Clear cart and simulate checkout | No |
+| — | CartController | GET | `/Cart/CheckoutSuccess` | CheckoutSuccess | Confirmation page | No |
 
-| # | Module | Focus |
-|---|--------|-------|
-| 01 | [Development Environment Setup](docs/01_development_environment_setup/01_development_environment_setup.md) | Dev containers, toolchain, Copilot activation |
-| 02 | [Implement Infrastructure with Copilot](docs/02_implement_infrastructure_with_copilot/02_implement_infrastructure_with_copilot.md) | Bicep authoring with AI pair-programming |
-| 03 | [GitHub Actions Pipeline](docs/03_github_actions_pipeline/03_github_actions_pipeline.md) | CI/CD from commit to cloud |
-| 04 | [GitHub Advanced Security](docs/04_github_advanced_security/04_github_advanced_security.md) | Code scanning, secret detection, dependency review |
-| 05 | [Integrate GitHub Copilot](docs/05_integrate_github_copilot_for_developer_productivity/05_integrate_github_copilot_for_developer_productivity.md) | Productivity tips, chat, inline suggestions |
-| 06 | [AI Governance & Model Observability](docs/06_ai_governance_and_model_observability/06_ai_governance_and_model_observability.md) | Responsible AI, model tracking, drift detection |
-| 07 | [Resource Cleanup](docs/07_resource_cleanup/07_resource_cleanup.md) | Tear down gracefully, avoid surprise bills |
+## 7. Important ViewModels & DTOs
+- `Product`: Id, Name, Description, Price, ImageUrl — displayed in catalog and cart.
+- `CartItem`: Product, Quantity — used for session cart storage.
+- `ErrorViewModel`: RequestId, ShowRequestId — used by error view.
+
+## 8. Services & Business Logic
+- `IProductService` / `ProductService`: returns in-memory product list, cached via `IDistributedCache` with optional telemetry events.
+- `CartService`: session-backed cart operations (add/update/remove/total), integrates telemetry, feature flags, and session abstraction.
+- `ISessionManager` / `SessionManager`: thin wrapper over `ISession` for testability.
+- `ITelemetryClient` / `ApplicationInsightsTelemetryClient`: wraps Application Insights client for DI/testing.
+- `IFeatureFlagService` / `FeatureFlagService`: helpers to check and execute behavior behind feature flags.
+
+## 9. Database & Entity Framework
+- Not used. Products are static; cart state is stored in session (in-memory or Redis). No `DbContext` or migrations present.
+
+## 10. Authentication & Authorization
+- None implemented. All routes are anonymous.
+
+## 11. API Endpoints
+- None; this is an MVC app with server-rendered views.
+
+## 12. Common Filters, Tag Helpers, Middleware
+- Middleware pipeline: HTTPS redirection (prod), static files, routing, session, authorization.
+- Feature Management and Azure App Configuration integration (optional) configured during startup.
+- Telemetry initializer `UserSessionTelemetryInitializer` adds session context to Application Insights telemetry.
+
+## 13. Testing Strategy
+- xUnit test project targeting net8.0 with Moq and coverlet. Tests cover controllers, services, and models under `src/ZavaStorefront.Tests`.
+- Run tests from `src`:
+  ```bash
+  dotnet test
+  ```
+
+## 14. Deployment Notes
+- Container-friendly via `src/Dockerfile`.
+- Azure deployment via Azure Developer CLI + Bicep (`infra/`); provision App Service (container), ACR, App Insights, Log Analytics, optional Redis, and managed identity.
+- One-command provision + deploy:
+  ```bash
+  az login && azd auth login
+  azd up
+  ```
 
 ---
 
