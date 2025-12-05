@@ -6,6 +6,10 @@
 <div class="container mt-4">
     <h1 class="mb-4">Our Products</h1>
 
+    <div class="alert alert-secondary small" role="note">
+        <strong>App version:</strong> @ViewData["AppVersion"] | <strong>.NET runtime:</strong> @ViewData["DotNetVersion"]
+    </div>
+
     <div class="row">
         @foreach (var product in Model)
         {

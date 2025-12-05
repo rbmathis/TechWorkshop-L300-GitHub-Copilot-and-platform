@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
 using ZavaStorefront.Models;
 using ZavaStorefront.Services;
@@ -21,6 +22,10 @@ public class HomeController : Controller
     public async Task<IActionResult> Index()
     {
         _logger.LogInformation("Loading products page");
+        var appVersion = Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "unknown";
+        var dotNetVersion = Environment.Version.ToString();
+        ViewData["AppVersion"] = appVersion;
+        ViewData["DotNetVersion"] = dotNetVersion;
         var products = await _productService.GetAllProductsAsync();
         return View(products);
     }
