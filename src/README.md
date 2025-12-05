@@ -17,6 +17,7 @@ A simple e-commerce storefront application built with .NET 6 ASP.NET MVC.
 - Bootstrap 5
 - Bootstrap Icons
 - Session-based state management (no database)
+- Azure Cache for Redis (optional distributed caching)
 
 ## Project Structure
 
@@ -106,6 +107,32 @@ To add custom product images, place JPG files in `wwwroot/images/products/` with
 - Session timeout: 30 minutes
 - No data persistence (cart clears when session expires)
 - Cart is cleared after successful checkout
+
+## Redis Caching
+
+The application supports Azure Cache for Redis for distributed session caching, which enables:
+- Session persistence across multiple app instances
+- Improved scalability for load-balanced deployments
+- Session survival during app restarts
+
+### Configuration
+
+Redis caching is controlled via configuration:
+
+```json
+{
+  "ConnectionStrings": {
+    "Redis": "<your-redis-connection-string>"
+  },
+  "UseRedisCache": true
+}
+```
+
+**Environment Variables (for Azure deployment):**
+- `ConnectionStrings__Redis`: The Redis connection string
+- `UseRedisCache`: Set to `true` to enable Redis caching
+
+When `UseRedisCache` is `false` or the connection string is empty, the app falls back to in-memory distributed cache (suitable for single-instance deployments).
 
 ## Logging
 

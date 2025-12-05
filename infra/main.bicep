@@ -24,6 +24,9 @@ param tags object = {
   managedBy: 'Bicep'
 }
 
+@description('Deploy Azure Redis Cache for distributed caching')
+param deployRedisCache bool = true
+
 // Variables
 var resourceGroupName = 'rg-${appNamePrefix}-${environmentName}-${location}'
 var logAnalyticsName = 'law-${appNamePrefix}-${environmentName}-${location}'
@@ -32,6 +35,7 @@ var acrName = 'acr${replace(appNamePrefix, '-', '')}${environmentName}'
 var appServicePlanName = 'asp-${appNamePrefix}-${environmentName}-${location}'
 var appServiceName = 'app-${appNamePrefix}-${environmentName}-${location}'
 var aiFoundryName = 'aif-${appNamePrefix}-${environmentName}-${location}'
+var redisCacheName = 'redis-${appNamePrefix}-${environmentName}'
 
 // Resource Group
 resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
@@ -85,6 +89,19 @@ module appServicePlan 'modules/appServicePlan.bicep' = {
   }
 }
 
+// Azure Cache for Redis (optional)
+module redisCache 'modules/redisCache.bicep' = if (deployRedisCache) {
+  scope: rg
+  name: 'redisCache-deployment'
+  params: {
+    name: redisCacheName
+    location: location
+    tags: tags
+    skuName: 'Basic'
+    skuCapacity: 0
+  }
+}
+
 // App Service
 module appService 'modules/appService.bicep' = {
   scope: rg
@@ -99,6 +116,7 @@ module appService 'modules/appService.bicep' = {
     appInsightsConnectionString: appInsights.outputs.connectionString
     appInsightsInstrumentationKey: appInsights.outputs.instrumentationKey
     acrLoginServer: acr.outputs.loginServer
+    redisConnectionString: deployRedisCache ? redisCache.outputs.connectionString : ''
   }
 }
 
@@ -138,3 +156,5 @@ output AZURE_CONTAINER_REGISTRY_NAME string = acr.outputs.name
 output SERVICE_WEB_NAME string = appService.outputs.name
 output SERVICE_WEB_RESOURCE_EXISTS bool = true
 output SERVICE_WEB_ENDPOINT string = 'https://${appService.outputs.defaultHostName}'
+output REDIS_CACHE_NAME string = deployRedisCache ? redisCache.outputs.name : ''
+output REDIS_CACHE_HOSTNAME string = deployRedisCache ? redisCache.outputs.hostName : ''

@@ -15,7 +15,8 @@ infra/
     ├── appServicePlan.bicep       # Linux App Service Plan
     ├── appService.bicep           # App Service with Managed Identity
     ├── roleAssignments.bicep      # RBAC role assignments
-    └── aiFoundry.bicep            # Azure AI Foundry workspace
+    ├── aiFoundry.bicep            # Azure AI Foundry workspace
+    └── redisCache.bicep           # Azure Cache for Redis
 ```
 
 ## Prerequisites
@@ -51,8 +52,14 @@ infra/
    - Model: GPT-4o (`gpt-4o-2024-11-20`)
    - Capacity: 30K TPM
 
+### Caching Infrastructure
+8. **Azure Cache for Redis**: `redis-zavastore-dev`
+   - SKU: Basic C0
+   - TLS 1.2 required
+   - Used for distributed session caching
+
 ### Security
-8. **Role Assignments**:
+9. **Role Assignments**:
    - AcrPull: App Service → Container Registry
    - Cognitive Services User: App Service → AI Foundry
 
@@ -103,6 +110,7 @@ All parameters are defined in `infra/main.parameters.json`:
 - `gptModelVersion`: GPT model version (default: "gpt-4o-2024-11-20")
 - `gptModelCapacity`: TPM capacity (default: 30)
 - `initialContainerImage`: Placeholder image
+- `deployRedisCache`: Enable Redis Cache deployment (default: true)
 
 ### Environment Variables
 
@@ -117,6 +125,8 @@ After deployment, azd will create `.azure/<env-name>/.env` with outputs:
 - `AZURE_OPENAI_DEPLOYMENT_NAME`: Model deployment name
 - `APP_SERVICE_NAME`: App Service name
 - `APP_SERVICE_URL`: App Service URL
+- `REDIS_CACHE_NAME`: Redis Cache name
+- `REDIS_CACHE_HOSTNAME`: Redis Cache hostname
 
 ## Cost Estimate
 
@@ -125,9 +135,10 @@ Monthly cost for dev environment:
 - App Service Plan B1: ~$13/month
 - Container Registry Basic: ~$5/month
 - Application Insights: ~$2-10/month (5GB cap)
+- Azure Cache for Redis Basic C0: ~$16/month
 - Azure AI Foundry: Pay-per-use (~$0.005/1K input tokens, ~$0.015/1K output tokens)
 
-**Total Infrastructure**: ~$20-30/month + AI usage
+**Total Infrastructure**: ~$36-46/month + AI usage
 
 ## Managed Identity & RBAC
 

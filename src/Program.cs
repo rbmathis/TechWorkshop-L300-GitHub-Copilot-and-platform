@@ -5,8 +5,24 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+// Add distributed cache - use Redis if configured, otherwise use in-memory cache
+var useRedisCache = builder.Configuration.GetValue<bool>("UseRedisCache");
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+
+if (useRedisCache && !string.IsNullOrEmpty(redisConnectionString))
+{
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConnectionString;
+        options.InstanceName = "ZavaStorefront:";
+    });
+}
+else
+{
+    builder.Services.AddDistributedMemoryCache();
+}
+
 // Add session support
-builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);
