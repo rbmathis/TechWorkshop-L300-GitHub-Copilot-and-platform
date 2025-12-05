@@ -24,6 +24,10 @@ param appInsightsInstrumentationKey string
 @description('The ACR login server URL')
 param acrLoginServer string
 
+@description('Redis Cache connection string (optional)')
+@secure()
+param redisConnectionString string = ''
+
 @description('Initial container image to use')
 param initialContainerImage string = 'mcr.microsoft.com/appsvc/staticsite:latest'
 
@@ -85,6 +89,14 @@ resource appService 'Microsoft.Web/sites@2023-12-01' = {
         {
           name: 'XDT_MicrosoftApplicationInsights_Mode'
           value: 'recommended'
+        }
+        {
+          name: 'ConnectionStrings__Redis'
+          value: redisConnectionString
+        }
+        {
+          name: 'UseRedisCache'
+          value: empty(redisConnectionString) ? 'false' : 'true'
         }
       ]
     }

@@ -18,10 +18,10 @@ public class HomeController : Controller
         _cartService = cartService;
     }
 
-    public IActionResult Index()
+    public async Task<IActionResult> Index()
     {
         _logger.LogInformation("Loading products page");
-        var products = _productService.GetAllProducts();
+        var products = await _productService.GetAllProductsAsync();
         return View(products);
     }
 

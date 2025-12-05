@@ -1,9 +1,20 @@
 using ZavaStorefront.Models;
+using Microsoft.Extensions.Caching.Distributed;
+using System.Text.Json;
 
 namespace ZavaStorefront.Services
 {
     public class ProductService
     {
+        private const string ProductsCacheKey = "AllProducts";
+        private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(10);
+        private readonly IDistributedCache _cache;
+
+        public ProductService(IDistributedCache cache)
+        {
+            _cache = cache;
+        }
+
         private static readonly List<Product> _products = new List<Product>
         {
             new Product
@@ -88,12 +99,33 @@ namespace ZavaStorefront.Services
             }        
         };
 
+        public async Task<List<Product>> GetAllProductsAsync()
+        {
+            // Try to get from distributed cache first
+            var cachedProducts = await _cache.GetStringAsync(ProductsCacheKey);
+            
+            if (!string.IsNullOrEmpty(cachedProducts))
+            {
+                return JsonSerializer.Deserialize<List<Product>>(cachedProducts) ?? _products;
+            }
+
+            // Cache miss - store products in cache
+            var options = new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = CacheExpiration
+            };
+            
+            await _cache.SetStringAsync(ProductsCacheKey, JsonSerializer.Serialize(_products), options);
+            
+            return _products;
+        }
+
         public List<Product> GetAllProducts()
         {
             return _products;
         }
 
-        public Product GetProductById(int id)
+        public Product? GetProductById(int id)
         {
             return _products.FirstOrDefault(p => p.Id == id);
         }
