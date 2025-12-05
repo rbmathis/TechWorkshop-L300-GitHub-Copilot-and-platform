@@ -20,9 +20,43 @@ jobs:
   test:
     runs-on: ubuntu-latest
     name: Test
+    permissions:
+      contents: write
+      pull-requests: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine version bump (PR labels)
+        id: bump-kind
+        if: github.event_name == 'pull_request'
+        run: |
+          labels=$(jq -r '.pull_request.labels[].name // empty' "$GITHUB_EVENT_PATH")
+          bump="patch"
+          if echo "$labels" | grep -qi "bump:major"; then
+            bump="major"
+          elif echo "$labels" | grep -qi "bump:minor"; then
+            bump="minor"
+          fi
+          echo "bump=$bump" >> "$GITHUB_OUTPUT"
+
+      - name: Bump version
+        id: bump-version
+        if: github.event_name == 'pull_request'
+        run: |
+          chmod +x .github/scripts/bump-version.sh
+          .github/scripts/bump-version.sh "${{ steps.bump-kind.outputs.bump }}"
+
+      - name: Commit bumped version
+        if: github.event_name == 'pull_request' && steps.bump-version.outputs.new_version != '' && github.event.pull_request.head.repo.fork == false
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/ZavaStorefront.csproj
+          git commit -m "chore: bump version to ${{ steps.bump-version.outputs.new_version }}" || echo "No changes to commit"
+          git push
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
