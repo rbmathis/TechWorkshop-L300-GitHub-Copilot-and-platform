@@ -1,13 +1,48 @@
 using ZavaStorefront.Services;
+using ZavaStorefront.Features;
 using ZavaStorefront;
 using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.Azure.AppConfiguration.AspNetCore;
+using Microsoft.FeatureManagement;
+using Azure.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Connect to Azure App Configuration (optional, will use local settings if not available)
+var appConfigConnection = builder.Configuration.GetConnectionString("AppConfig");
+if (!string.IsNullOrEmpty(appConfigConnection))
+{
+    try
+    {
+        builder.Configuration.AddAzureAppConfiguration(options =>
+        {
+            options.Connect(appConfigConnection)
+                .ConfigureKeyVault(kv =>
+                {
+                    kv.SetCredential(new DefaultAzureCredential());
+                })
+                .UseFeatureFlags(featureFlagOptions =>
+                {
+                    featureFlagOptions.CacheExpirationInterval = TimeSpan.FromSeconds(30);
+                });
+        });
+    }
+    catch (Exception ex)
+    {
+        // Log warning if App Configuration is not available
+        var logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger("Startup");
+        logger.LogWarning($"Failed to connect to App Configuration: {ex.Message}. Using local configuration.");
+    }
+}
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 builder.Services.AddApplicationInsightsTelemetry();
 builder.Services.AddSingleton<ITelemetryInitializer, UserSessionTelemetryInitializer>();
+
+// Add Feature Management
+builder.Services.AddFeatureManagement();
+builder.Services.AddScoped<IFeatureFlagService, FeatureFlagService>();
 
 // Add distributed cache - use Redis if configured, otherwise use in-memory cache
 var useRedisCache = builder.Configuration.GetValue<bool>("UseRedisCache");
@@ -37,7 +72,7 @@ builder.Services.AddSession(options =>
 // Register application services
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITelemetryClient, ApplicationInsightsTelemetryClient>();
-builder.Services.AddScoped<ISessionManager>(serviceProvider =>
+builder.Services.AddScoped<ZavaStorefront.Services.ISessionManager>(serviceProvider =>
 {
     var httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
     var session = httpContextAccessor.HttpContext?.Session
@@ -45,7 +80,6 @@ builder.Services.AddScoped<ISessionManager>(serviceProvider =>
     return new SessionManager(session);
 });
 builder.Services.AddScoped<IProductService, ProductService>();
-builder.Services.AddSingleton<ProductService>();
 builder.Services.AddScoped<CartService>();
 
 var app = builder.Build();

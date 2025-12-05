@@ -36,6 +36,7 @@ var appServicePlanName = 'asp-${appNamePrefix}-${environmentName}-${location}'
 var appServiceName = 'app-${appNamePrefix}-${environmentName}-${location}'
 var aiFoundryName = 'aif-${appNamePrefix}-${environmentName}-${location}'
 var redisCacheName = 'redis-${appNamePrefix}-${environmentName}'
+var appConfigName = 'appconfig-${appNamePrefix}-${environmentName}'
 
 // Resource Group
 resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
@@ -141,6 +142,17 @@ module aiFoundry 'modules/aiFoundry.bicep' = {
   }
 }
 
+// Azure App Configuration
+module appConfiguration 'modules/appConfiguration.bicep' = {
+  scope: rg
+  name: 'appConfiguration-deployment'
+  params: {
+    appConfigName: appConfigName
+    location: location
+    tags: tags
+  }
+}
+
 // Outputs
 output resourceGroupName string = rg.name
 output appServiceName string = appService.outputs.name
@@ -148,6 +160,8 @@ output appServiceHostName string = appService.outputs.defaultHostName
 output acrName string = acr.outputs.name
 output acrLoginServer string = acr.outputs.loginServer
 output appInsightsConnectionString string = appInsights.outputs.connectionString
+output appConfigName string = appConfiguration.outputs.appConfigName
+output appConfigConnectionString string = appConfiguration.outputs.connectionString
 
 // Service-specific outputs for azd
 output AZURE_RESOURCE_GROUP string = rg.name
@@ -158,3 +172,5 @@ output SERVICE_WEB_RESOURCE_EXISTS bool = true
 output SERVICE_WEB_ENDPOINT string = 'https://${appService.outputs.defaultHostName}'
 output REDIS_CACHE_NAME string = deployRedisCache ? redisCache.outputs.name : ''
 output REDIS_CACHE_HOSTNAME string = deployRedisCache ? redisCache.outputs.hostName : ''
+output APP_CONFIG_NAME string = appConfiguration.outputs.appConfigName
+output APP_CONFIG_ENDPOINT string = 'https://${appConfigName}.azconfig.io'

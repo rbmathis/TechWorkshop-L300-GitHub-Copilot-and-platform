@@ -12,20 +12,22 @@ namespace ZavaStorefront.Tests.Services
         private readonly Mock<IHttpContextAccessor> _httpContextAccessor;
         private readonly Mock<IProductService> _productService;
         private readonly Mock<ITelemetryClient> _telemetry;
-        private readonly Mock<ISessionManager> _sessionManager;
+        private readonly Mock<ZavaStorefront.Services.ISessionManager> _sessionManager;
+        private readonly Mock<ZavaStorefront.Features.IFeatureFlagService> _featureFlagService;
         private readonly CartService _cartService;
 
         public CartServiceTests()
         {
             _httpContextAccessor = new Mock<IHttpContextAccessor>();
-            _sessionManager = new Mock<ISessionManager>();
+            _sessionManager = new Mock<ZavaStorefront.Services.ISessionManager>();
             _telemetry = new Mock<ITelemetryClient>();
             _productService = new Mock<IProductService>();
+            _featureFlagService = new Mock<ZavaStorefront.Features.IFeatureFlagService>();
 
             var httpContext = new Mock<HttpContext>();
             _httpContextAccessor.Setup(x => x.HttpContext).Returns(httpContext.Object);
 
-            _cartService = new CartService(_httpContextAccessor.Object, _productService.Object, _telemetry.Object, _sessionManager.Object);
+            _cartService = new CartService(_httpContextAccessor.Object, _productService.Object, _telemetry.Object, _sessionManager.Object, _featureFlagService.Object);
         }
 
         [Fact]

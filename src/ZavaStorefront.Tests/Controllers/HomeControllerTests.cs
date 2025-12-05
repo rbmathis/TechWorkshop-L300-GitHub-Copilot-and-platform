@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using ZavaStorefront.Controllers;
 using ZavaStorefront.Services;
 using ZavaStorefront.Models;
+using ZavaStorefront.Features;
 
 namespace ZavaStorefront.Tests.Controllers
 {
@@ -23,7 +24,8 @@ namespace ZavaStorefront.Tests.Controllers
                 new Mock<Microsoft.AspNetCore.Http.IHttpContextAccessor>().Object,
                 _productService.Object,
                 new Mock<ITelemetryClient>().Object,
-                new Mock<ISessionManager>().Object);
+                new Mock<ZavaStorefront.Services.ISessionManager>().Object,
+                new Mock<IFeatureFlagService>().Object);
 
             _controller = new HomeController(_logger.Object, _productService.Object, _cartService.Object);
         }
