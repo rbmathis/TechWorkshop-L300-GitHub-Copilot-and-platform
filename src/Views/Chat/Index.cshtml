@@ -1,0 +1,198 @@
+@model ZavaStorefront.Models.ChatViewModel
+@{
+    ViewData["Title"] = "AI Chat";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h1 class="mb-4">
+                <i class="bi bi-chat-dots"></i> AI Chat Assistant
+            </h1>
+            <p class="text-muted">Chat with our AI assistant powered by Microsoft Foundry Phi4</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-chat-left-text"></i> Conversation</span>
+                    <button type="button" class="btn btn-sm btn-light" id="clearHistoryBtn">
+                        <i class="bi bi-trash"></i> Clear History
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="chatHistory" class="border rounded p-3 mb-3" style="height: 400px; overflow-y: auto; background-color: #f8f9fa;">
+                        @if (Model.Messages != null && Model.Messages.Any())
+                        {
+                            @foreach (var message in Model.Messages)
+                            {
+                                <div class="mb-3 @(message.Role == "user" ? "text-end" : "")">
+                                    <div class="d-inline-block p-2 rounded @(message.Role == "user" ? "bg-primary text-white" : "bg-light border")" style="max-width: 75%;">
+                                        <strong>@(message.Role == "user" ? "You" : "AI Assistant"):</strong>
+                                        <div class="mt-1">@message.Content</div>
+                                        <small class="text-muted d-block mt-1">@message.Timestamp.ToLocalTime().ToString("g")</small>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="text-center text-muted py-5">
+                                <i class="bi bi-chat-square-dots" style="font-size: 3rem;"></i>
+                                <p class="mt-2">No messages yet. Start a conversation!</p>
+                            </div>
+                        }
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <i class="bi bi-exclamation-triangle"></i> @Model.ErrorMessage
+                        </div>
+                    }
+
+                    <form id="chatForm">
+                        <div class="input-group">
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="messageInput" 
+                                   placeholder="Type your message here..." 
+                                   required
+                                   autocomplete="off">
+                            <button class="btn btn-primary" type="submit" id="sendBtn">
+                                <i class="bi bi-send"></i> Send
+                            </button>
+                        </div>
+                    </form>
+
+                    <div id="loadingIndicator" class="text-center mt-3" style="display: none;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="text-muted mt-2">AI is thinking...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Auto-scroll to bottom of chat history
+            function scrollToBottom() {
+                var chatHistory = $('#chatHistory');
+                chatHistory.scrollTop(chatHistory[0].scrollHeight);
+            }
+
+            // Initial scroll
+            scrollToBottom();
+
+            // Handle form submission
+            $('#chatForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                var messageInput = $('#messageInput');
+                var message = messageInput.val().trim();
+                
+                if (!message) {
+                    return;
+                }
+
+                // Disable input and show loading
+                messageInput.prop('disabled', true);
+                $('#sendBtn').prop('disabled', true);
+                $('#loadingIndicator').show();
+
+                // Send message to server
+                $.ajax({
+                    url: '@Url.Action("SendMessage", "Chat")',
+                    type: 'POST',
+                    data: { message: message },
+                    success: function(response) {
+                        if (response.success) {
+                            // Add user message
+                            appendMessage(response.userMessage);
+                            
+                            // Add assistant message
+                            appendMessage(response.assistantMessage);
+                            
+                            // Clear input
+                            messageInput.val('');
+                            
+                            // Scroll to bottom
+                            scrollToBottom();
+                        } else {
+                            alert('Error: ' + (response.error || 'Unknown error occurred'));
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        alert('Error sending message: ' + error);
+                    },
+                    complete: function() {
+                        // Re-enable input and hide loading
+                        messageInput.prop('disabled', false);
+                        $('#sendBtn').prop('disabled', false);
+                        $('#loadingIndicator').hide();
+                        messageInput.focus();
+                    }
+                });
+            });
+
+            // Handle clear history button
+            $('#clearHistoryBtn').on('click', function() {
+                if (confirm('Are you sure you want to clear the conversation history?')) {
+                    $.ajax({
+                        url: '@Url.Action("ClearHistory", "Chat")',
+                        type: 'POST',
+                        success: function(response) {
+                            if (response.success) {
+                                // Clear the chat history display
+                                $('#chatHistory').html('<div class="text-center text-muted py-5"><i class="bi bi-chat-square-dots" style="font-size: 3rem;"></i><p class="mt-2">No messages yet. Start a conversation!</p></div>');
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            alert('Error clearing history: ' + error);
+                        }
+                    });
+                }
+            });
+
+            // Function to append message to chat history
+            function appendMessage(message) {
+                var isUser = message.role === 'user';
+                var messageHtml = '<div class="mb-3 ' + (isUser ? 'text-end' : '') + '">' +
+                    '<div class="d-inline-block p-2 rounded ' + (isUser ? 'bg-primary text-white' : 'bg-light border') + '" style="max-width: 75%;">' +
+                    '<strong>' + (isUser ? 'You' : 'AI Assistant') + ':</strong>' +
+                    '<div class="mt-1">' + escapeHtml(message.content) + '</div>' +
+                    '<small class="text-muted d-block mt-1">' + formatTimestamp(message.timestamp) + '</small>' +
+                    '</div>' +
+                    '</div>';
+                
+                // Remove empty state message if present
+                var emptyState = $('#chatHistory').find('.text-center.text-muted.py-5');
+                if (emptyState.length > 0) {
+                    emptyState.remove();
+                }
+                
+                $('#chatHistory').append(messageHtml);
+            }
+
+            // Function to escape HTML
+            function escapeHtml(text) {
+                var div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            // Function to format timestamp
+            function formatTimestamp(isoString) {
+                var date = new Date(isoString);
+                return date.toLocaleString();
+            }
+        });
+    </script>
+}
