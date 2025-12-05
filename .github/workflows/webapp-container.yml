@@ -29,16 +29,16 @@ jobs:
         with:
           dotnet-version: "8.x"
           cache: true
-          cache-dependency-path: "**/packages.lock.json"
+          cache-dependency-path: "**/obj/project.assets.json"
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore src/ZavaStorefront.sln
 
       - name: Build
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build src/ZavaStorefront.sln --configuration Release --no-restore
 
       - name: Run tests
-        run: dotnet test --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+        run: dotnet test src/ZavaStorefront.sln --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
 
       - name: Upload test results
         if: always()
