@@ -3,6 +3,10 @@ name: Build and Deploy Container to Azure Web App
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - ".github/workflows/**"
+      - "**/*.md"
   workflow_dispatch:
 
 env:
