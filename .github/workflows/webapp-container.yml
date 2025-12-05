@@ -38,4 +38,4 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          images: $REGISTRY_LOGIN_SERVER/$IMAGE_NAME:${{ github.sha }}
+          images: ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}

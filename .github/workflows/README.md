@@ -32,3 +32,4 @@ Usage:
 - Workflow: `.github/workflows/webapp-container.yml`
 - Triggers on push to `main` or manual dispatch.
 - Builds `./src` as a Docker image, pushes to ACR, then updates the App Service container to that tag (`${{ github.sha }}`).
+- If you hit `LinuxFxVersion has an invalid value`, confirm the workflow uses expression syntax for the image: `images: ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}`.
