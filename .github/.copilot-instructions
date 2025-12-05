@@ -1,34 +1,231 @@
-# Copilot Instructions
+# GitHub Copilot Instructions for Zava Storefront
 
-## Build Verification After Code Changes
+## Project Overview
 
-After every code change, execute the following build command to ensure nothing has broken:
+Zava Storefront is an ASP.NET Core 8 MVC e-commerce application featuring:
+- Product catalog with shopping cart
+- Session-based cart state (in-memory or Redis-backed)
+- Feature flag management with Azure App Configuration
+- Application Insights telemetry integration
+- Bulk discount system with tiered pricing
+- Docker containerization and Azure deployment via Bicep IaC
 
+**Target Audience**: This is a workshop/demo application for learning GitHub Copilot and platform features.
+
+## Technology Stack
+
+- **Framework**: ASP.NET Core 8 MVC
+- **Language**: C# with .NET 8 SDK
+- **Caching**: IDistributedCache (in-memory or Redis)
+- **Session Storage**: IDistributedCache-backed sessions
+- **Feature Flags**: Microsoft.FeatureManagement with Azure App Configuration
+- **Telemetry**: Application Insights
+- **Testing**: xUnit 2.7.0, Moq 4.20.70, Coverlet 6.0.0 (target: 80% coverage)
+- **UI**: Bootstrap 5, Razor views
+- **Deployment**: Docker, Azure App Service, Azure Container Registry
+
+## Repository Structure
+
+```
+.
+├── src/                          # Main application code
+│   ├── Controllers/              # MVC controllers (HomeController, CartController)
+│   ├── Features/                 # Feature flag constants and services
+│   ├── Models/                   # View models (Product, CartItem, ErrorViewModel)
+│   ├── Services/                 # Business logic (CartService, ProductService, SessionManager)
+│   ├── Views/                    # Razor views and layouts
+│   ├── wwwroot/                  # Static assets (CSS, JS, images)
+│   ├── Program.cs                # DI container setup and middleware pipeline
+│   ├── ZavaStorefront.Tests/    # xUnit test suite
+│   └── Dockerfile                # Multi-stage container build
+├── infra/                        # Bicep IaC templates for Azure deployment
+├── docs/                         # Workshop step-by-step guides
+├── .github/
+│   ├── workflows/                # GitHub Actions CI/CD pipelines
+│   └── prompts/                  # Custom Copilot Chat prompts
+└── azure.yaml                    # Azure Developer CLI manifest
+```
+
+## Build & Test Commands
+
+### Build
+After **every code change**, verify the build:
 ```bash
 cd /workspaces/TechWorkshop-L300-GitHub-Copilot-and-platform/src && dotnet build
 ```
+**Mandatory**: Ensure exit code 0 before proceeding. Fix build errors immediately.
 
-### Guidelines
+### Test
+Run the full test suite:
+```bash
+cd /workspaces/TechWorkshop-L300-GitHub-Copilot-and-platform/src && dotnet test
+```
 
-1. **Mandatory Build Check**: Run `dotnet build` after completing any code modifications
-2. **Verify Success**: Ensure the build completes successfully (exit code 0)
-3. **Report Issues**: If the build fails, report the error details and do not proceed with further changes until the issue is resolved
-4. **Apply Fixes**: If build failures occur, investigate and fix the issues before completing the task
+Run specific test class:
+```bash
+cd /workspaces/TechWorkshop-L300-GitHub-Copilot-and-platform/src && dotnet test --filter "FullyQualifiedName~CartServiceTests"
+```
 
-### Applicable File Types
+Run with coverage:
+```bash
+cd /workspaces/TechWorkshop-L300-GitHub-Copilot-and-platform/src && dotnet test /p:CollectCoverage=true /p:CoverageFormat=opencover
+```
 
-- C# files (\*.cs)
-- CSHTML files (\*.cshtml)
-- Configuration files (appsettings.json)
-- Project files (\*.csproj)
-- Any other files that could affect the build
+### Local Run
+```bash
+cd /workspaces/TechWorkshop-L300-GitHub-Copilot-and-platform/src && dotnet run
+# Navigate to https://localhost:5001
+```
 
-### Build Failure Handling
+## Coding Conventions & Style
 
-When the build fails:
+### C# Style Guidelines
+- Follow **C# coding conventions** and .NET best practices
+- Use **meaningful variable and method names**
+- Use **XML documentation comments** for public APIs
+- Keep methods **focused and single-responsibility**
+- Use **dependency injection** for all services (configured in Program.cs)
+- Avoid hardcoded strings; use constants or configuration
+- Handle **nullable reference types** properly (project uses nullable context)
 
-1. Stop making additional changes
-2. Display the error message to the user
+### Naming Conventions
+- **Classes/Interfaces**: PascalCase (e.g., `CartService`, `IProductService`)
+- **Methods**: PascalCase (e.g., `GetCartAsync`, `AddToCart`)
+- **Parameters/Variables**: camelCase (e.g., `productId`, `cartItems`)
+- **Constants**: PascalCase (e.g., `FeatureFlags.BulkDiscounts`)
+- **Private fields**: Start with underscore (e.g., `_telemetryClient`)
+
+### Project-Specific Patterns
+- **Services**: Abstract logic into services with interfaces (e.g., `ICartService`, `IProductService`)
+- **Telemetry**: Use `ITelemetryClient` wrapper (not raw `TelemetryClient`) for testability
+- **Feature Flags**: Check via `IFeatureFlagService.IsEnabledAsync()` before executing conditional logic
+- **Session**: Use `ISessionManager` abstraction (not raw `ISession`) for testability
+- **Controllers**: Keep thin; delegate business logic to services
+- **Models**: Use DTOs/view models for data transfer; keep domain models simple
+
+## Testing Requirements
+
+- **Framework**: xUnit with Moq for mocking
+- **Target Coverage**: 80% overall code coverage
+- **Scope**: Test services, controllers, and models
+- **Conventions**:
+  - Name tests descriptively: `MethodName_ExpectedBehavior_WhenCondition`
+  - Use `Moq` for dependency injection mocking
+  - Arrange-Act-Assert pattern
+  - One assertion per test when possible
+- **Test Structure**:
+  - `Services/` tests for business logic
+  - `Controllers/` tests for MVC actions
+  - `Models/` tests for data models
+- **When adding new features**: Add corresponding unit tests before marking task complete
+
+## Feature Flags
+
+The application uses feature management. Current flags:
+- `BulkDiscounts`: Enables tiered discount calculation (5% at $50, 10% at $100)
+- `NewCheckout`: Reserved for future checkout improvements
+- `RecommendationEngine`: Reserved for product recommendations
+- `AdvancedAnalytics`: Reserved for enhanced analytics
+- `EarlyAccessProducts`: Reserved for early access programs
+
+**When adding feature flag logic**:
+1. Add constant to `Features/FeatureFlags.cs`
+2. Use `IFeatureFlagService.IsEnabledAsync(FeatureFlags.FlagName)` to check
+3. Add telemetry events for feature usage
+4. Document in README.md under section 9a
+
+## Configuration & Secrets
+
+- **appsettings.json**: Public configuration; **NEVER store secrets here**
+- **User Secrets**: Use `dotnet user-secrets` for local secrets (App Insights connection strings, Redis)
+- **Azure**: Use Azure App Configuration + Key Vault for production secrets
+- **Environment Variables**: Can override appsettings values
+- **Connection Strings**: Redis connection string in `ConnectionStrings:Redis`
+
+**Security Rule**: Never commit secrets, API keys, or connection strings to source control.
+
+## Suitable Tasks for Copilot
+
+Copilot excels at:
+- ✅ Bug fixes in existing code
+- ✅ Adding unit tests for existing functionality
+- ✅ Refactoring code for maintainability
+- ✅ Implementing small, well-defined features
+- ✅ Updating documentation (README, code comments)
+- ✅ Improving code coverage
+- ✅ Adding telemetry/logging
+- ✅ Fixing linting/build warnings
+- ✅ Implementing feature flag logic
+
+Less suitable:
+- ❌ Complex architectural changes
+- ❌ Cross-cutting refactors spanning many files
+- ❌ Tasks requiring deep domain knowledge
+- ❌ Ambiguous or open-ended requirements
+- ❌ Production-critical security changes without human review
+
+## Key Files & Their Purposes
+
+| File/Directory | Purpose |
+|----------------|---------|
+| `src/Program.cs` | DI container setup, middleware pipeline, feature management config |
+| `src/Controllers/HomeController.cs` | Product catalog display, add-to-cart action |
+| `src/Controllers/CartController.cs` | Cart view, quantity updates, checkout |
+| `src/Services/CartService.cs` | Cart operations (add/remove/update), discount calculations |
+| `src/Services/ProductService.cs` | Product retrieval with distributed cache |
+| `src/Features/FeatureFlags.cs` | Feature flag constants |
+| `src/appsettings.json` | Application configuration (non-secret) |
+| `src/ZavaStorefront.Tests/` | xUnit test suite |
+| `infra/main.bicep` | Azure infrastructure-as-code orchestrator |
+| `docs/` | Workshop guides and documentation |
+| `.github/workflows/` | CI/CD pipeline definitions |
+| `CONTRIBUTING.md` | Contribution guidelines with semantic versioning rules |
+
+## Commit Message Conventions
+
+This project uses **Conventional Commits** for automatic semantic versioning:
+- `feat:` → Minor version bump (new feature)
+- `fix:` → Patch version bump (bug fix)
+- `docs:` → Patch version bump (documentation)
+- `feat!:` or `BREAKING CHANGE:` → Major version bump
+
+**Always follow Conventional Commits format** for your commit messages.
+
+## Security & Quality
+
+- **No new security vulnerabilities**: Always validate user input and sanitize output
+- **Thread safety**: Session and cache operations must be thread-safe
+- **Null safety**: Handle nullable reference types properly
+- **Error handling**: Use try-catch with proper logging; avoid exposing stack traces to users
+- **HTTPS**: Production always uses HTTPS redirection
+- **SQL Injection**: Not applicable (no database/ORM used)
+- **XSS**: Razor views auto-encode; use `@Html.Raw()` cautiously
+
+## Build Failure Handling
+
+If build fails:
+1. **Stop making additional changes**
+2. Display the full error message
 3. Investigate the root cause
-4. Fix the issues
-5. Re-run the build to confirm resolution
+4. Fix the issue
+5. Re-run `dotnet build` to confirm resolution
+6. Only then proceed with the task
+
+## Documentation Updates
+
+When changing functionality:
+- Update `README.md` if public APIs or features change
+- Update XML doc comments for public methods
+- Update `TESTING.md` if test patterns change
+- Keep `docs/` workshop guides in sync if they reference changed code
+
+## Iterative Review & Feedback
+
+- After implementing a feature, **request review** before marking complete
+- If feedback is provided, iterate and improve
+- Re-run tests and builds after each iteration
+- Use **small, focused commits** following Conventional Commits
+
+---
+
+**Summary**: Write clean, testable C# code. Use dependency injection. Check feature flags. Add unit tests. Build and test after every change. Follow semantic versioning in commits. Keep humans in the loop for final approval.
