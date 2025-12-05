@@ -19,5 +19,10 @@ namespace ZavaStorefront.Services
         /// Remove a value from session.
         /// </summary>
         void Remove(string key);
+
+        /// <summary>
+        /// Get the current session ID.
+        /// </summary>
+        string GetSessionId();
     }
 }

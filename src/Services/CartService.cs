@@ -188,12 +188,29 @@ namespace ZavaStorefront.Services
                 FeatureFlags.BulkDiscounts,
                 async () =>
                 {
-                    var discountedTotal = ApplyBulkDiscount(baseTotal);
+                    var (discountedTotal, tierApplied, discountRate) = ApplyBulkDiscountWithDetails(baseTotal);
+                    var discountAmount = baseTotal - discountedTotal;
+                    var itemCount = GetCartItemCount();
+
+                    // Track bulk discount usage with detailed telemetry
                     _telemetry.TrackEvent("BulkDiscount_Applied", new Dictionary<string, string>
                     {
                         { "originalTotal", baseTotal.ToString("F2") },
-                        { "discountedTotal", discountedTotal.ToString("F2") }
+                        { "discountedTotal", discountedTotal.ToString("F2") },
+                        { "discountAmount", discountAmount.ToString("F2") },
+                        { "discountTier", tierApplied },
+                        { "discountRate", (discountRate * 100).ToString("F0") + "%" },
+                        { "itemCount", itemCount.ToString() },
+                        { "sessionId", _sessionManager.GetSessionId() }
+                    }, new Dictionary<string, double>
+                    {
+                        { "originalTotal", (double)baseTotal },
+                        { "discountedTotal", (double)discountedTotal },
+                        { "discountAmount", (double)discountAmount },
+                        { "discountPercentage", (double)(discountRate * 100) },
+                        { "itemCount", itemCount }
                     });
+
                     return await Task.FromResult(discountedTotal);
                 },
                 baseTotal);
@@ -211,6 +228,20 @@ namespace ZavaStorefront.Services
                 return total * (1 - _discountOptions.RateLow);
             }
             return total;
+        }
+
+        private (decimal discountedTotal, string tierApplied, decimal discountRate) ApplyBulkDiscountWithDetails(decimal total)
+        {
+            // Use inclusive comparisons so thresholds like 100.00 still trigger the higher tier
+            if (total >= _discountOptions.ThresholdHigh && _discountOptions.RateHigh > 0)
+            {
+                return (total * (1 - _discountOptions.RateHigh), "High", _discountOptions.RateHigh);
+            }
+            if (total >= _discountOptions.ThresholdLow && _discountOptions.RateLow > 0)
+            {
+                return (total * (1 - _discountOptions.RateLow), "Low", _discountOptions.RateLow);
+            }
+            return (total, "None", 0m);
         }
 
         private void SaveCart(List<CartItem> cart)

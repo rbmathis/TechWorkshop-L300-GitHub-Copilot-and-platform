@@ -29,5 +29,10 @@ namespace ZavaStorefront.Services
         {
             _session.Remove(key);
         }
+
+        public string GetSessionId()
+        {
+            return _session.Id;
+        }
     }
 }
