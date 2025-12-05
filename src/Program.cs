@@ -46,9 +46,11 @@ builder.Services.AddScoped<IFeatureFlagService, FeatureFlagService>();
 
 // Add distributed cache - use Redis if configured, otherwise use in-memory cache
 var useRedisCache = builder.Configuration.GetValue<bool>("UseRedisCache");
+var useRedisSessionStore = builder.Configuration.GetValue<bool>("UseRedisSessionStore");
 var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
 
-if (useRedisCache && !string.IsNullOrEmpty(redisConnectionString))
+// Configure distributed cache (Redis or in-memory)
+if ((useRedisCache || useRedisSessionStore) && !string.IsNullOrEmpty(redisConnectionString))
 {
     builder.Services.AddStackExchangeRedisCache(options =>
     {
@@ -61,12 +63,18 @@ else
     builder.Services.AddDistributedMemoryCache();
 }
 
-// Add session support
+// Add session support with Redis or in-memory store
+var sessionIdleTimeoutMinutes = builder.Configuration.GetValue<int>("Session:IdleTimeoutMinutes", 30);
+var sessionCookieName = builder.Configuration.GetValue<string>("Session:CookieName", ".AspNetCore.Session");
+var sessionCookieHttpOnly = builder.Configuration.GetValue<bool>("Session:CookieHttpOnly", true);
+var sessionCookieIsEssential = builder.Configuration.GetValue<bool>("Session:CookieIsEssential", true);
+
 builder.Services.AddSession(options =>
 {
-    options.IdleTimeout = TimeSpan.FromMinutes(30);
-    options.Cookie.HttpOnly = true;
-    options.Cookie.IsEssential = true;
+    options.IdleTimeout = TimeSpan.FromMinutes(sessionIdleTimeoutMinutes);
+    options.Cookie.Name = sessionCookieName;
+    options.Cookie.HttpOnly = sessionCookieHttpOnly;
+    options.Cookie.IsEssential = sessionCookieIsEssential;
 });
 
 // Register application services
