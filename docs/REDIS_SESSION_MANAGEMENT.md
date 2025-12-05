@@ -97,11 +97,13 @@ builder.Services.AddSession(options =>
 ### For Development (Local Redis)
 
 1. **Start Redis locally** (using Docker):
+
    ```bash
    docker run -d -p 6379:6379 redis:latest
    ```
 
 2. **Update appsettings.json**:
+
    ```json
    {
      "ConnectionStrings": {
@@ -121,6 +123,7 @@ builder.Services.AddSession(options =>
 1. **Create Azure Redis Cache** via Azure Portal or Bicep
 
 2. **Update appsettings.json or User Secrets**:
+
    ```json
    {
      "ConnectionStrings": {
@@ -160,6 +163,7 @@ public class SessionManager : ISessionManager
 ```
 
 This abstraction:
+
 - Works seamlessly with Redis or in-memory session stores
 - Provides string-based session operations for shopping cart data
 - Encapsulates session state management
@@ -170,10 +174,10 @@ This abstraction:
 public List<CartItem> GetCart()
 {
     var cartJson = _sessionManager.GetString("ShoppingCart");
-    
+
     if (string.IsNullOrEmpty(cartJson))
         return new List<CartItem>();
-    
+
     return JsonSerializer.Deserialize<List<CartItem>>(cartJson) ?? new List<CartItem>();
 }
 
@@ -226,11 +230,13 @@ public void SaveCart(List<CartItem> cart)
 ## Testing
 
 Redis session management is tested in:
+
 - `CartServiceTests.cs` - Session storage and retrieval
 - `HomeControllerTests.cs` - Session management in controllers
 - Integration tests (to be added for full session lifecycle)
 
 **Note:** Current tests use in-memory session by default. Enable Redis-backed tests by:
+
 1. Setting `UseRedisSessionStore: true` in test configuration
 2. Starting Redis before running tests
 
