@@ -28,8 +28,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.x"
-          cache: true
-          cache-dependency-path: "**/obj/project.assets.json"
 
       - name: Restore dependencies
         run: dotnet restore src/ZavaStorefront.sln
