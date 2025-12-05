@@ -29,25 +29,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Determine version bump (PR labels)
-        id: bump-kind
-        if: github.event_name == 'pull_request'
-        run: |
-          labels=$(jq -r '.pull_request.labels[].name // empty' "$GITHUB_EVENT_PATH")
-          bump="patch"
-          if echo "$labels" | grep -qi "bump:major"; then
-            bump="major"
-          elif echo "$labels" | grep -qi "bump:minor"; then
-            bump="minor"
-          fi
-          echo "bump=$bump" >> "$GITHUB_OUTPUT"
-
-      - name: Bump version
+      - name: Determine version bump (auto-detect from commits)
         id: bump-version
         if: github.event_name == 'pull_request'
         run: |
           chmod +x .github/scripts/bump-version.sh
-          .github/scripts/bump-version.sh "${{ steps.bump-kind.outputs.bump }}"
+          # Auto-detect bump type from commit messages
+          # Pass base ref to analyze commits in this PR
+          .github/scripts/bump-version.sh auto "${{ github.event.pull_request.base.sha }}"
 
       - name: Commit bumped version
         if: github.event_name == 'pull_request' && steps.bump-version.outputs.new_version != '' && github.event.pull_request.head.repo.fork == false
@@ -85,19 +74,43 @@ jobs:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     permissions:
       id-token: write
-      contents: read
+      contents: write
       deployments: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read current version and create git tag
+        id: version-tag
+        run: |
+          version="$(grep -oPm1 '(?<=<Version>)[^<]+' src/ZavaStorefront.csproj || echo '1.0.0')"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          
+          # Check if tag already exists
+          if git rev-parse "v$version" >/dev/null 2>&1; then
+            echo "Tag v$version already exists"
+            echo "tag_created=false" >> "$GITHUB_OUTPUT"
+          else
+            # Create and push tag
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "v$version" -m "Release version $version"
+            git push origin "v$version"
+            echo "Created and pushed tag v$version"
+            echo "tag_created=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Set image tags
         id: image-tags
         run: |
-          echo "short-sha=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+          short_sha=$(echo ${{ github.sha }} | cut -c1-7)
+          echo "short-sha=$short_sha" >> $GITHUB_OUTPUT
           echo "tag-latest=${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
           echo "tag-commit=${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" >> $GITHUB_OUTPUT
-          echo "tag-short=${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.image-tags.outputs.short-sha }}" >> $GITHUB_OUTPUT
+          echo "tag-version=${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:v${{ steps.version-tag.outputs.version }}" >> $GITHUB_OUTPUT
+          echo "tag-short=${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:$short_sha" >> $GITHUB_OUTPUT
 
       - name: Azure login (OIDC)
         uses: azure/login@v1
@@ -118,6 +131,7 @@ jobs:
           tags: |
             ${{ steps.image-tags.outputs.tag-latest }}
             ${{ steps.image-tags.outputs.tag-commit }}
+            ${{ steps.image-tags.outputs.tag-version }}
           cache-from: type=registry,ref=${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
 
@@ -176,8 +190,12 @@ jobs:
         run: |
           echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** v${{ steps.version-tag.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Git Tag Created:** ${{ steps.version-tag.outputs.tag_created }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Image Tags:**" >> $GITHUB_STEP_SUMMARY
           echo "- Latest: ${{ steps.image-tags.outputs.tag-latest }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Version: ${{ steps.image-tags.outputs.tag-version }}" >> $GITHUB_STEP_SUMMARY
           echo "- Commit: ${{ steps.image-tags.outputs.tag-commit }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Web App:** ${{ env.AZURE_WEBAPP_NAME }}" >> $GITHUB_STEP_SUMMARY

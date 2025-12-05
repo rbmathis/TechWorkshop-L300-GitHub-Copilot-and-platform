@@ -179,12 +179,38 @@ docker run -p 8080:80 zava-storefront
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please review the [Code of Conduct](https://opensource.microsoft.com/codeofconduct/) before submitting a PR.
+Contributions are welcome! This project uses **automated Semantic Versioning** based on commit messages.
+
+**Important**: Please read our [Contributing Guidelines](CONTRIBUTING.md) to understand:
+- How to write commit messages using [Conventional Commits](https://www.conventionalcommits.org/)
+- How automatic versioning works (major/minor/patch)
+- Pull request process and code standards
+
+Before submitting a PR:
 
 1. Fork the repo
 2. Create a feature branch (`git checkout -b feat/awesome-thing`)
-3. Commit your changes with a clear message
-4. Open a Pull Request — the CLA bot will guide you through licensing
+3. Write commits following Conventional Commits format (e.g., `feat:`, `fix:`, `docs:`)
+4. Open a Pull Request — version will be automatically bumped based on your commits
+5. The CLA bot will guide you through licensing
+
+**Quick commit examples:**
+- `feat: add new feature` → Minor version bump (0.X.0)
+- `fix: resolve bug` → Patch version bump (0.0.X)
+- `feat!: breaking change` → Major version bump (X.0.0)
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for complete guidelines.
+
+---
+
+## 📦 Semantic Versioning
+
+This project follows [Semantic Versioning 2.0.0](https://semver.org/):
+- **MAJOR** (X.0.0): Breaking changes
+- **MINOR** (0.X.0): New features (backward-compatible)
+- **PATCH** (0.0.X): Bug fixes (backward-compatible)
+
+Versioning is **fully automated** via CI/CD based on commit messages. Current version is maintained in `src/ZavaStorefront.csproj` and automatically tagged in git on each release.
 
 ---
 
