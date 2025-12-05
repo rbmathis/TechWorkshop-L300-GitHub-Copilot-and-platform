@@ -3,13 +3,13 @@
 ## 1. Project Overview
 
 - A lightweight ASP.NET Core MVC storefront that lists products, lets shoppers manage a cart, and performs a simple checkout flow. Session-based cart state with optional Redis backing; no database is required.
-- Tech stack: ASP.NET Core MVC on .NET 6, Bootstrap 5, Application Insights telemetry, optional Azure Cache for Redis, Azure App Configuration + Feature Management, Docker.
+- Tech stack: ASP.NET Core MVC on .NET 8, Bootstrap 5, Application Insights telemetry, optional Azure Cache for Redis, Azure App Configuration + Feature Management, Docker.
 - Architecture: classic MVC with dependency injection; services abstract telemetry, products, cart, sessions, and feature flags.
 - **New**: Bulk discount support with tiered pricing rules applied via feature flags.
 
 ## 2. Prerequisites & Setup
 
-- SDKs/Tools: .NET 6 SDK, Docker (optional for container run), Azure CLI + Azure Developer CLI for cloud deployment.
+- SDKs/Tools: .NET 8 SDK, Docker (optional for container run), Azure CLI + Azure Developer CLI for cloud deployment.
 - Local run:
   ```bash
   git clone https://github.com/rbmathis/TechWorkshop-L300-GitHub-Copilot-and-platform.git
