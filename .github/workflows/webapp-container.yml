@@ -1,0 +1,41 @@
+name: Build and Deploy Container to Azure Web App
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER }}
+  IMAGE_NAME: zavastorefront
+  AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: ACR login
+        run: az acr login --name ${{ vars.ACR_NAME }}
+
+      - name: Build container image
+        run: docker build -t $REGISTRY_LOGIN_SERVER/$IMAGE_NAME:${{ github.sha }} ./src
+
+      - name: Push image
+        run: docker push $REGISTRY_LOGIN_SERVER/$IMAGE_NAME:${{ github.sha }}
+
+      - name: Deploy to Web App (container)
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          images: $REGISTRY_LOGIN_SERVER/$IMAGE_NAME:${{ github.sha }}
