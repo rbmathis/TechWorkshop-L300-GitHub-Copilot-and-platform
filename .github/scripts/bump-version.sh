@@ -5,6 +5,11 @@ FILE="src/ZavaStorefront.csproj"
 BUMP_KIND="${1:-auto}"
 BASE_REF="${2:-}"
 
+# Define regex patterns for commit type detection
+BREAKING_CHANGE_PATTERN="BREAKING[- ]CHANGE:|^[a-zA-Z]+(\([^)]+\))?!:"
+FEATURE_PATTERN="^feat(\([^)]+\))?:"
+OTHER_TYPES_PATTERN="^(fix|chore|docs|style|refactor|perf|test|build|ci|revert)(\([^)]+\))?:"
+
 if [[ ! -f "$FILE" ]]; then
   echo "File not found: $FILE" >&2
   exit 1
@@ -23,12 +28,13 @@ if [[ "$BUMP_KIND" == "auto" ]]; then
   if [[ -n "$BASE_REF" ]]; then
     commits=$(git log "${BASE_REF}..HEAD" --pretty=format:"%s" 2>/dev/null || echo "")
   else
-    # Get commits since the last tag, or all commits if no tags exist
+    # Get commits since the last tag, or recent commits if no tags exist
     last_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
     if [[ -n "$last_tag" ]]; then
       commits=$(git log "${last_tag}..HEAD" --pretty=format:"%s" 2>/dev/null || echo "")
     else
-      commits=$(git log --pretty=format:"%s" 2>/dev/null || echo "")
+      # Limit to last 100 commits for efficiency
+      commits=$(git log --max-count=100 --pretty=format:"%s" 2>/dev/null || echo "")
     fi
   fi
   
@@ -41,20 +47,20 @@ if [[ "$BUMP_KIND" == "auto" ]]; then
   
   while IFS= read -r commit; do
     # Check for BREAKING CHANGE in commit message
-    if echo "$commit" | grep -qiE "BREAKING[- ]CHANGE:|^[a-z]+(\([^)]+\))?!:"; then
+    if echo "$commit" | grep -qiE "$BREAKING_CHANGE_PATTERN"; then
       BUMP_KIND="major"
       echo "  - BREAKING CHANGE detected: $commit"
       break
     fi
     # Check for feat: (new feature)
-    if echo "$commit" | grep -qiE "^feat(\([^)]+\))?:"; then
+    if echo "$commit" | grep -qiE "$FEATURE_PATTERN"; then
       if [[ "$BUMP_KIND" != "major" ]]; then
         BUMP_KIND="minor"
         echo "  - Feature detected: $commit"
       fi
     fi
     # Other types (fix, chore, docs, etc.) stay as patch
-    if echo "$commit" | grep -qiE "^(fix|chore|docs|style|refactor|perf|test|build|ci|revert)(\([^)]+\))?:"; then
+    if echo "$commit" | grep -qiE "$OTHER_TYPES_PATTERN"; then
       echo "  - Non-breaking change: $commit"
     fi
   done <<< "$commits"

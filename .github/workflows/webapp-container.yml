@@ -105,11 +105,12 @@ jobs:
       - name: Set image tags
         id: image-tags
         run: |
-          echo "short-sha=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+          short_sha=$(echo ${{ github.sha }} | cut -c1-7)
+          echo "short-sha=$short_sha" >> $GITHUB_OUTPUT
           echo "tag-latest=${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
           echo "tag-commit=${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" >> $GITHUB_OUTPUT
           echo "tag-version=${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:v${{ steps.version-tag.outputs.version }}" >> $GITHUB_OUTPUT
-          echo "tag-short=${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.image-tags.outputs.short-sha }}" >> $GITHUB_OUTPUT
+          echo "tag-short=${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:$short_sha" >> $GITHUB_OUTPUT
 
       - name: Azure login (OIDC)
         uses: azure/login@v1

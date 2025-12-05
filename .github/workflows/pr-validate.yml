@@ -25,7 +25,7 @@ jobs:
           # Conventional Commits regex pattern
           # Matches: type(optional-scope): description
           # Also matches: type(scope)!: description for breaking changes
-          pattern="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9_-]+\))?(!)?: .{1,100}"
+          pattern="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9_-]+\))?(!)?:.{1,100}"
           
           invalid_count=0
           valid_count=0
@@ -75,7 +75,7 @@ jobs:
             echo '- `fix: resolve checkout validation issue`' >> $GITHUB_STEP_SUMMARY
             echo '- `feat(cart)!: breaking change to cart API`' >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "📖 See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md) for complete guidelines." >> $GITHUB_STEP_SUMMARY
+            echo "📖 See [CONTRIBUTING.md](CONTRIBUTING.md) for complete guidelines." >> $GITHUB_STEP_SUMMARY
             
             echo ""
             echo "❌ Validation failed: $invalid_count invalid commit message(s)"
@@ -101,6 +101,10 @@ jobs:
           
           commits=$(git log --pretty=format:"%s" "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}")
           
+          # Define regex patterns (matching bump-version.sh)
+          BREAKING_CHANGE_PATTERN="BREAKING[- ]CHANGE:|^[a-zA-Z]+(\([^)]+\))?!:"
+          FEATURE_PATTERN="^feat(\([^)]+\))?:"
+          
           bump_type="patch"
           reasons=()
           
@@ -111,11 +115,11 @@ jobs:
             fi
             
             # Check for breaking changes
-            if echo "$message" | grep -qiE "BREAKING[- ]CHANGE:|^[a-z]+(\([^)]+\))?!:"; then
+            if echo "$message" | grep -qiE "$BREAKING_CHANGE_PATTERN"; then
               bump_type="major"
               reasons+=("- 🔴 **MAJOR** bump: Breaking change detected in: \`$message\`")
             # Check for features
-            elif echo "$message" | grep -qE "^feat(\([^)]+\))?:"; then
+            elif echo "$message" | grep -qiE "$FEATURE_PATTERN"; then
               if [[ "$bump_type" != "major" ]]; then
                 bump_type="minor"
                 reasons+=("- 🟡 **MINOR** bump: New feature in: \`$message\`")
