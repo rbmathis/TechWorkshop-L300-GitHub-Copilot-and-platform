@@ -7,8 +7,10 @@ A simple e-commerce storefront application built with .NET 6 ASP.NET MVC.
 - **Product Listing**: Browse a catalog of 8 sample products with images, descriptions, and prices
 - **Shopping Cart**: Add products to cart with session-based storage
 - **Cart Management**: View cart, update quantities, remove items
+- **Bulk Discounts**: Tiered discount system that applies discounts based on cart total (5% off at $50+, 10% off at $100+) — feature-flag controlled
 - **Checkout**: Simple checkout process that clears cart and shows success message
 - **Responsive Design**: Mobile-friendly layout using Bootstrap 5
+- **Telemetry Integration**: Application Insights tracking for cart operations and discount application
 
 ## Technology Stack
 
@@ -18,6 +20,8 @@ A simple e-commerce storefront application built with .NET 6 ASP.NET MVC.
 - Bootstrap Icons
 - Session-based state management (no database)
 - Azure Cache for Redis (optional distributed caching)
+- Azure Application Insights (telemetry)
+- Feature Management / Azure App Configuration (feature flags)
 
 ## Project Structure
 
@@ -50,11 +54,13 @@ ZavaStorefront/
 ## How to Run
 
 1. Navigate to the project directory:
+
    ```bash
    cd ZavaStorefront
    ```
 
 2. Run the application:
+
    ```bash
    dotnet run
    ```
@@ -67,11 +73,13 @@ ZavaStorefront/
 ## Product Images
 
 The application includes 8 sample products. Product images are referenced from:
+
 - `/wwwroot/images/products/`
 
 If images are not found, the application automatically falls back to placeholder images from placeholder.com.
 
 To add custom product images, place JPG files in `wwwroot/images/products/` with these names:
+
 - headphones.jpg
 - smartwatch.jpg
 - speaker.jpg
@@ -98,8 +106,25 @@ To add custom product images, place JPG files in `wwwroot/images/products/` with
 2. **Add to Cart**: Click "Buy" button to add products to cart
 3. **View Cart**: Click cart icon (top right) to view cart contents
 4. **Update Cart**: Modify quantities or remove items
-5. **Checkout**: Click "Checkout" button to complete purchase
-6. **Success**: View confirmation and return to products
+5. **Apply Discounts**: If bulk discount feature is enabled, cart total is automatically calculated with tiered discounts applied
+
+## Bulk Discount Configuration
+
+Discount tiers are defined via configuration (default values in `appsettings.json`):
+
+```json
+"BulkDiscountOptions": {
+  "ThresholdLow": 50,
+  "RateLow": 0.05,
+  "ThresholdHigh": 100,
+  "RateHigh": 0.10
+}
+```
+
+- **Low Tier**: When cart total ≥ $50, apply 5% discount
+- **High Tier**: When cart total ≥ $100, apply 10% discount
+
+The discount is applied hierarchically: if the high threshold is met, the high discount rate is used; otherwise, the low tier is checked. Enable/disable via the `BulkDiscounts` feature flag. 5. **Checkout**: Click "Checkout" button to complete purchase 6. **Success**: View confirmation and return to products
 
 ## Session Management
 
@@ -111,6 +136,7 @@ To add custom product images, place JPG files in `wwwroot/images/products/` with
 ## Redis Caching
 
 The application supports Azure Cache for Redis for distributed session caching, which enables:
+
 - Session persistence across multiple app instances
 - Improved scalability for load-balanced deployments
 - Session survival during app restarts
@@ -129,6 +155,7 @@ Redis caching is controlled via configuration:
 ```
 
 **Environment Variables (for Azure deployment):**
+
 - `ConnectionStrings__Redis`: The Redis connection string
 - `UseRedisCache`: Set to `true` to enable Redis caching
 
@@ -137,6 +164,7 @@ When `UseRedisCache` is `false` or the connection string is empty, the app falls
 ## Logging
 
 The application includes structured logging for:
+
 - Product page loads
 - Adding products to cart
 - Cart operations (update, remove)

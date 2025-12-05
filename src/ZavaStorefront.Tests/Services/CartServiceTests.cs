@@ -27,7 +27,16 @@ namespace ZavaStorefront.Tests.Services
             var httpContext = new Mock<HttpContext>();
             _httpContextAccessor.Setup(x => x.HttpContext).Returns(httpContext.Object);
 
-            _cartService = new CartService(_httpContextAccessor.Object, _productService.Object, _telemetry.Object, _sessionManager.Object, _featureFlagService.Object);
+            var discountOptions = new Mock<Microsoft.Extensions.Options.IOptions<BulkDiscountOptions>>();
+            discountOptions.Setup(o => o.Value).Returns(new BulkDiscountOptions
+            {
+                ThresholdLow = 50m,
+                RateLow = 0.05m,
+                ThresholdHigh = 100m,
+                RateHigh = 0.10m
+            });
+
+            _cartService = new CartService(_httpContextAccessor.Object, _productService.Object, _telemetry.Object, _sessionManager.Object, _featureFlagService.Object, discountOptions.Object);
         }
 
         [Fact]

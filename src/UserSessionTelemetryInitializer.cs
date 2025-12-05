@@ -1,6 +1,7 @@
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace ZavaStorefront
 {
@@ -17,10 +18,18 @@ namespace ZavaStorefront
         public void Initialize(ITelemetry telemetry)
         {
             var httpContext = _httpContextAccessor.HttpContext;
-            var userId = httpContext?.User?.Identity?.IsAuthenticated == true
+            if (httpContext == null)
+            {
+                return; // No HTTP context available (e.g., background telemetry)
+            }
+
+            var userId = httpContext.User?.Identity?.IsAuthenticated == true
                 ? httpContext.User.Identity?.Name
                 : "anonymous";
-            var sessionId = httpContext?.Session?.Id ?? "no-session";
+
+            // Session may not be configured or available for this request; guard access
+            var sessionFeature = httpContext.Features.Get<ISessionFeature>();
+            var sessionId = sessionFeature?.Session?.Id ?? "no-session";
 
             telemetry.Context.User.Id = userId ?? "anonymous";
             telemetry.Context.Session.Id = sessionId;
